@@ -31,7 +31,8 @@ def receive_messages(sock):
             match list(json_packet.keys())[0]:
                 case "NewMessage":
                     msg = json_packet["NewMessage"]
-                    print(f"\r{msg["author_id"]}: {msg["content"]}\n> ", end="")
+                    name = msg["username"]
+                    print(f"\r{ name if name else msg["author_id"] }: {msg["content"]}\n> ", end="")
                 
                 case "Disconnect":
                     disconn_msg = json_packet["Disconnect"]
@@ -81,7 +82,7 @@ def login(client):
 
 def start_client():
     host = '127.0.0.1'
-    port = 5225
+    port = 19975
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 

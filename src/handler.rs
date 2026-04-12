@@ -1,14 +1,13 @@
 use crate::{
-    try_next_packet,
-
-    protocol::{
-        ServerPacket,
-        ClientPacket,
-    },
     auth::auth_user,
+    config::Config,
+    protocol::{
+        ClientPacket, ServerPacket
+    }, try_next_packet
 };
 
 use {
+    std::sync::Arc,
     tokio::{
         io::BufReader,
         net::tcp::OwnedReadHalf,
@@ -16,11 +15,10 @@ use {
     },
 };
 
-pub async fn handle_client(reader_half: OwnedReadHalf, addr: std::net::SocketAddr, sender: mpsc::Sender<ServerPacket>) {
+pub async fn handle_client(reader_half: OwnedReadHalf, addr: std::net::SocketAddr, sender: mpsc::Sender<ServerPacket>, conf: Arc<Config>) {
     let mut reader = BufReader::new(reader_half);
     println!("[ {addr} CONNECTED ] awaiting login credentials...");
-
-    let user = match auth_user(&mut reader, addr).await {
+    let user = match auth_user(&mut reader, addr, &conf.auth.url).await {
         Ok(u) => u,
         Err(e) => {
             println!("[ {addr} INFO ] Failed login: {e}");
@@ -33,6 +31,12 @@ pub async fn handle_client(reader_half: OwnedReadHalf, addr: std::net::SocketAdd
         }
     };
 
+    println!("[ {addr} AUTHENTICATED ] successfully as {}", user.username);
+    let _ = sender
+        .send( ServerPacket::Connect { addr, user: user.clone() } )
+        .await
+        .unwrap();
+
     'connected: loop {
         let client_packet = try_next_packet!(&mut reader, addr);
 
@@ -43,8 +47,10 @@ pub async fn handle_client(reader_half: OwnedReadHalf, addr: std::net::SocketAdd
             }
 
             ClientPacket::SendMessage { content, .. } => {
+                if content.len() == 0 { return; }
+
                 println!("[ {addr} SENT A MESSAGE ] '{content}'");
-                let msg_packet = ServerPacket::NewMessage { author_id: user.user_id, content: content };
+                let msg_packet = ServerPacket::NewMessage { username: Some(user.username.clone()), author_id: user.user_id, content: content };
 
                 if let Some(e) = sender.send(msg_packet).await.err() {
                     eprintln!("[ UNABLE TO BROADCAST ] {e}");

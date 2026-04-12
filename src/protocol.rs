@@ -1,5 +1,6 @@
 use crate::{
     Error,
+    auth::UserDetails,
 };
 
 use {
@@ -19,14 +20,19 @@ pub struct Message {
     pub content: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub enum ServerPacket {
+    Connect {
+        user: UserDetails,
+        addr: SocketAddr,
+    },
     Disconnect {
         reason: String,
         addr: SocketAddr,
     },
     NewMessage {
         author_id: u32,
+        username: Option<String>,
         content: String,
     },
 }
