@@ -4,7 +4,6 @@ use crate::{
     protocol::{
         ServerPacket,
         ClientPacket,
-        Message,
     },
     auth::auth_user,
 };

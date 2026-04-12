@@ -23,7 +23,6 @@ impl <T>Channel<T> {
     }
 }
 
-
 pub struct Server {
     addr: String,
     broadcast: Channel<ServerPacket>,
@@ -83,8 +82,8 @@ impl Server {
                                 println!("[ FAILED DISCONNECT ] Tried to disconnect client for reason: '{reason}' but failed.");
                             }
                         }
-            }   }   }
-
+                    }
+        }   }   }
             for (writer, addr) in clients.iter_mut() {
                 let _ = writer.try_write(
                     serde_json::to_string(
@@ -95,6 +94,6 @@ impl Server {
                     )
                     .unwrap()
                     .as_bytes());
-            }
-    }   }
+        }
+    }
 }

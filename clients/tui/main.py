@@ -34,7 +34,9 @@ def receive_messages(sock):
                     print(f"\r{msg["author_id"]}: {msg["content"]}\n> ", end="")
                 
                 case "Disconnect":
-                    print(json_packet)
+                    disconn_msg = json_packet["Disconnect"]
+                    print(f"\rYou have been disconnected from the server. reason: {disconn_msg["reason"]}")
+                    print("\n\tPress enter to exit...")
                     running = False
                     break
 
@@ -66,8 +68,8 @@ def login(client):
         }) + "\n").encode("utf-8"))
 
     else:
-        username = input("Enter kattauth username: ")
-        password = input("Enter kattauth password: ")
+        username = input("\rEnter kattauth username: ")
+        password = input("\rEnter kattauth password: ")
 
         client.sendall((json.dumps({
             "Login": {
@@ -107,8 +109,9 @@ def start_client():
         pass
 
     finally:
-        print("\nClosing connection...")
+        print("Closing connection...")
         client_socket.close()
+        print("Stopped.")
 
 if __name__ == "__main__":
     start_client()
