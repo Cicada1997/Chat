@@ -39,7 +39,6 @@ impl Server {
 
     pub async fn listen(&mut self) {
         let listener = TcpListener::bind(&self.addr).await.unwrap();
-
         let mut clients = Vec::new();
 
         'listning: loop {
@@ -61,8 +60,7 @@ impl Server {
                     };
 
                     match packet {
-                        ServerPacket::NewMessage(..) => {
-
+                        ServerPacket::NewMessage { .. } => {
                             for (writer, _) in clients.iter_mut() {
                                 let _ = writer.try_write(json_packet.as_bytes());
                             }
@@ -85,5 +83,18 @@ impl Server {
                                 println!("[ FAILED DISCONNECT ] Tried to disconnect client for reason: '{reason}' but failed.");
                             }
                         }
-    }   }   }   }   }
+            }   }   }
+
+            for (writer, addr) in clients.iter_mut() {
+                let _ = writer.try_write(
+                    serde_json::to_string(
+                        &ServerPacket::Disconnect {
+                            reason: String::from("Server is closing."),
+                            addr:   *addr
+                        }
+                    )
+                    .unwrap()
+                    .as_bytes());
+            }
+    }   }
 }

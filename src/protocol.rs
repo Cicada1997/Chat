@@ -25,7 +25,10 @@ pub enum ServerPacket {
         reason: String,
         addr: SocketAddr,
     },
-    NewMessage(Message),
+    NewMessage {
+        author_id: u32,
+        content: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

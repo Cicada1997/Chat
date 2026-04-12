@@ -45,7 +45,7 @@ pub async fn handle_client(reader_half: OwnedReadHalf, addr: std::net::SocketAdd
 
             ClientPacket::SendMessage { content, .. } => {
                 println!("[ {addr} SENT A MESSAGE ] '{content}'");
-                let msg_packet = ServerPacket::NewMessage( Message { author_id: user.user_id, content: content });
+                let msg_packet = ServerPacket::NewMessage { author_id: user.user_id, content: content };
 
                 if let Some(e) = sender.send(msg_packet).await.err() {
                     eprintln!("[ UNABLE TO BROADCAST ] {e}");
