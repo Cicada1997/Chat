@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use tokio::net::{tcp::OwnedWriteHalf, unix::SocketAddr};
 
 use crate::{
-    auth::UserDetails, config::Config, handler, protocol::ServerPacket
+    config::Config,
+    handler::Handler,
+    protocol::ServerPacket,
 };
 
 use {
@@ -28,23 +29,14 @@ impl <T>Channel<T> {
 }
 
 pub struct Server {
-    // addr: String,
     conf: Arc<Config>,
 
     broadcast: Channel<ServerPacket>,
 }
 
-// pub struct ChachedUser {
-//     writer: OwnedWriteHalf,
-//     addr: SocketAddr,
-//     cache: Option<UserDetails>,
-// }
-
 impl Server {
     pub fn new(conf: Arc<Config>) -> Self {
         Self {
-            // addr: format!("{}:{}", conf.chat.ip,
-            // conf.chat.port.unwrap_or(Config::default().chat.port)),
             conf,
 
             broadcast: Channel::new(60),
@@ -57,6 +49,8 @@ impl Server {
         let mut clients = Vec::new();
         let mut client_cache = HashMap::new();
 
+        let handler = Arc::new(Handler::new(self.conf.clone(), self.broadcast.sender.clone()));
+
         'listning: loop {
             tokio::select! {
                 _ = tokio::signal::ctrl_c() => break 'listning,
@@ -66,7 +60,12 @@ impl Server {
 
                     clients.push((writer, addr));
 
-                    tokio::spawn(handler::handle_client(reader, addr, self.broadcast.sender.clone(), self.conf.clone()));
+                    {
+                        let handler_c = handler.clone();
+                        tokio::spawn( async move {
+                            handler_c.handle_client(reader, addr).await;
+                        });
+                    }
                 },
 
                 Some(packet) = self.broadcast.receiver.recv() => {
