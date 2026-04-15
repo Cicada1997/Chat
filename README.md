@@ -1,5 +1,5 @@
 # CicadaChat
-**An rust chat app backend connected to the Cat Mouse Network.**
+**An rust chat app backend connected to the [Cat Mouse Network](https://kattmys.se/).**
 
 ## Server API
 To communicate with the server you need to know how the protocol works. It is fairly simple: it uses a tcp stream to
