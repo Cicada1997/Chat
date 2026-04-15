@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 
+use tokio::io::AsyncWriteExt;
+
 use crate::{
     config::Config,
     handler::Handler,
@@ -48,6 +50,7 @@ impl Server {
         let listener = TcpListener::bind(addr).await.unwrap();
         let mut clients = Vec::new();
         let mut client_cache = HashMap::new();
+        let mut messages: Vec<String> = Vec::new();
 
         let handler = Arc::new(Handler::new(self.conf.clone(), self.broadcast.sender.clone()));
 
@@ -72,6 +75,14 @@ impl Server {
                     match packet.clone() {
                         ServerPacket::Connect { user, addr } => {
                             client_cache.insert(user.user_id, (addr, user));
+
+                            for (writer, addr_match) in clients.iter() {
+                                if *addr_match == addr {
+                                    for pack in messages.split_at(std::cmp::max(messages.len() as isize - 20, 0) as usize).1.iter() {
+                                        let _ = writer.try_write(pack.as_bytes());
+                                    }
+                                }
+                            }
                         }
 
                         ServerPacket::NewMessage { username, author_id, content } => {
@@ -88,6 +99,8 @@ impl Server {
                                 Ok(json_packet) => json_packet + "\n",
                                 Err(_) => continue,
                             };
+
+                            messages.push(json_packet.clone());
 
                             for (writer, _) in clients.iter_mut() {
                                 let _ = writer.try_write(json_packet.as_bytes());
