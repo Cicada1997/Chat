@@ -67,6 +67,10 @@ pub async fn auth_user(reader: &mut BufReader<OwnedReadHalf>, addr: std::net::So
                 return auth_by_username(username, password, auth_url).await;
             }
 
+            ClientPacket::Disconnect => {
+                return Err("User disconnected".into());
+            }
+
             _ => {
                 eprintln!("[ WARNING ] {addr} tried to send authorized packet without being authenticated {packet:?}")
             }

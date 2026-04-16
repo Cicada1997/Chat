@@ -34,7 +34,10 @@ impl Handler {
 
         println!("[ {addr} CONNECTED ] awaiting login credentials...");
         let user = match auth_user(&mut reader, addr, &self.conf.auth.url).await {
-            Ok(u) => u,
+            Ok(u) => {
+                println!("[ {addr} AUTHENTICATED ] successfully as {}", u.username);
+                u
+            },
             Err(e) => {
                 println!("[ {addr} INFO ] Failed login: {e}");
                 let reason = format!("Unable to authenticate ({e})");
@@ -46,7 +49,6 @@ impl Handler {
             }
         };
 
-        println!("[ {addr} AUTHENTICATED ] successfully as {}", user.username);
         let _ = sender
             .send( ServerPacket::Connect { addr, user: user.clone() } )
             .await
@@ -63,7 +65,7 @@ impl Handler {
 
                 ClientPacket::SendMessage { mut content, .. } => {
                     content = content.trim().to_string();
-                    if content.len() == 0 { return; }
+                    if content.len() == 0 { continue 'connected; }
 
                     println!("[ {addr} SENT A MESSAGE ] '{content}'");
                     let msg_packet = ServerPacket::NewMessage { username: Some(user.username.clone()), author_id: user.user_id, content: content };

@@ -1,18 +1,21 @@
-use std::collections::HashMap;
-
-
-use tokio::io::AsyncWriteExt;
-
 use crate::{
+    Error,
     config::Config,
     handler::Handler,
     protocol::ServerPacket,
 };
 
 use {
-    std::sync::Arc,
+    std::{
+        collections::HashMap,
+        sync::Arc,
+    },
     tokio::{
-        net::TcpListener,
+        io::AsyncWriteExt,
+        net::{
+            TcpListener,
+            tcp::OwnedWriteHalf,
+        },
         sync::mpsc,
     },
 };
@@ -34,6 +37,22 @@ pub struct Server {
     conf: Arc<Config>,
 
     broadcast: Channel<ServerPacket>,
+}
+
+static MAX_ATTEMPTS: usize = 3;
+
+pub async fn send_data(writer: &mut OwnedWriteHalf, data: &String) -> Result<(), Error> {
+    'try_loop: for attempt in 1..=MAX_ATTEMPTS {
+        if let Some(err) = writer.write_all(data.as_bytes()).await.err() {
+            eprintln!("[ FAILED TO SEND PACKET ] reason (attempt: {attempt}): {err}");
+            if attempt == MAX_ATTEMPTS { return Err(Box::new(err)) }
+        }
+
+        let _ = writer.flush().await;
+        break 'try_loop;
+    }
+
+    Ok(())
 }
 
 impl Server {
@@ -74,12 +93,12 @@ impl Server {
                 Some(packet) = self.broadcast.receiver.recv() => {
                     match packet.clone() {
                         ServerPacket::Connect { user, addr } => {
-                            client_cache.insert(user.user_id, (addr, user));
+                            client_cache.insert(user.user_id, (addr, user.clone()));
 
-                            for (writer, addr_match) in clients.iter() {
+                            for (writer, addr_match) in clients.iter_mut() {
                                 if *addr_match == addr {
                                     for pack in messages.split_at(std::cmp::max(messages.len() as isize - 20, 0) as usize).1.iter() {
-                                        let _ = writer.try_write(pack.as_bytes());
+                                        send_data(writer, pack).await.unwrap();
                                     }
                                 }
                             }
