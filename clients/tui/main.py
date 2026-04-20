@@ -79,10 +79,10 @@ def login(client):
         client.sendall(LOGIN(username, password).encode("utf-8"))
 
 def start_client():
-    host = "127.0.0.1"
-    port = 19975
-    # host = "cicada.kattmys.se"
-    # port = 1997
+    # host = "127.0.0.1"
+    # port = 19975
+    host = "cicada.kattmys.se"
+    port = 1997
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
